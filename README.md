@@ -1,5 +1,6 @@
 [![Paypal](https://img.shields.io/badge/Paypal-Donate-success?style=for-the-badge&logo=paypal)](https://www.paypal.com/donate/?business=QT2Y72ABMYJNG&no_recurring=0&currency_code=AUD) 
 [![Discord](https://img.shields.io/discord/674782527139086350?color=7289DA&label=Discord&style=for-the-badge&logo=discord)](https://discord.gg/atjrUen5fJ)
+[![DockerHub](https://img.shields.io/badge/Docker-Hub-%23099cec?style=for-the-badge&logo=docker)](https://hub.docker.com/r/optimusperky/requestrr)
 [![DockerHub](https://img.shields.io/badge/GitHub-Upstream-lightgrey?style=for-the-badge&logo=github)](https://github.com/thomst08/requestrr/)
 
 
@@ -17,7 +18,7 @@ Requestrr
 > - **Bug fix**: fresh artist requests were never actually being set to `monitored: true` in Lidarr regardless of the `MonitorNewRequests` setting, because `addOptions.monitor` was never sent on artist creation
 > - **Bug fix**: Lidarr's own "NOT NULL constraint failed: Albums.Images" error (triggered when adding an album with no cover art — a genuine Lidarr-side bug, reproduced directly against its API) now shows a clear explanation instead of a generic error
 >
-> **Not published to Docker Hub** — this fork is built locally, not pulled as an image. See [Docker Set-up & Start](#docker-set-up--start) below.
+> **Published to Docker Hub as [`optimusperky/requestrr`](https://hub.docker.com/r/optimusperky/requestrr)** — see [Docker Set-up & Start](#docker-set-up--start) below.
 
 Requestrr is a chatbot used to simplify using services like Sonarr/Radarr/Lidarr/Overseerr/Ombi via the use of chat!  
 
@@ -44,7 +45,32 @@ https://github.com/thomst08/requestrr/wiki
 Docker Set-up & Start
 ==================
 
-This fork isn't on Docker Hub, so build it from source rather than pulling `thomst08/requestrr`:
+Quickest option — pull the published image directly, same as upstream but pointed at this fork's tag:
+
+```bash
+docker run -d \
+  --name requestrr \
+  -p 4545:4545 \
+  -v /path/to/config:/root/config \
+  -e TZ=Europe/London \
+  --restart=unless-stopped \
+  optimusperky/requestrr:latest
+```
+
+Then access the web portal at `http://youraddress:4545/` to create your admin account and configure everything. Once the bot is configured and invited to your Discord server, type **/help** to see all available commands.
+
+To update to a newer `latest`, pull and recreate — your existing config volume (bot token, Sonarr/Radarr/Lidarr connections, everything) carries over untouched:
+
+```bash
+docker pull optimusperky/requestrr:latest
+docker stop requestrr && docker rm requestrr
+docker run -d --name requestrr --restart=unless-stopped -p 4545:4545 \
+  -v /path/to/config:/root/config -e TZ=Europe/London optimusperky/requestrr:latest
+```
+
+### Building from source instead
+
+Only needed if you're making your own changes on top of this fork:
 
 ```bash
 git clone https://github.com/Optimus-Perky/requestrr.git
@@ -60,16 +86,7 @@ docker run -d \
   requestrr-fork:live
 ```
 
-Then access the web portal at `http://youraddress:4545/` to create your admin account and configure everything. Once the bot is configured and invited to your Discord server, type **/help** to see all available commands.
-
-To pick up changes after pulling new commits, rebuild the image and recreate the container — your existing config volume (bot token, Sonarr/Radarr/Lidarr connections, everything) carries over untouched, since only the application code inside the container changes:
-
-```bash
-docker build -f dockerfile -t requestrr-fork:live .
-docker stop requestrr && docker rm requestrr
-docker run -d --name requestrr --restart=unless-stopped -p 4545:4545 \
-  -v /path/to/config:/root/config -e TZ=Europe/London requestrr-fork:live
-```
+Rebuild and recreate the same way after pulling new commits to pick up changes.
 
 <br />
 
@@ -101,7 +118,7 @@ docker run -d \
   -e REQUESTRR_BASEURL=/requestrr \
   -e TZ=Europe/London \
   --restart=unless-stopped \
-  requestrr-fork:live
+  optimusperky/requestrr:latest
 ```
 
 > ⚠️ **Note**: When setting `REQUESTRR_BASEURL`, make sure it matches your reverse proxy config if you're serving Requestrr under a subpath.
