@@ -1,7 +1,6 @@
 [![Paypal](https://img.shields.io/badge/Paypal-Donate-success?style=for-the-badge&logo=paypal)](https://www.paypal.com/donate/?business=QT2Y72ABMYJNG&no_recurring=0&currency_code=AUD) 
 [![Discord](https://img.shields.io/discord/674782527139086350?color=7289DA&label=Discord&style=for-the-badge&logo=discord)](https://discord.gg/atjrUen5fJ)
-[![DockerHub](https://img.shields.io/badge/Docker-Hub-%23099cec?style=for-the-badge&logo=docker)](https://hub.docker.com/r/thomst08/requestrr)
-[![DockerHub](https://img.shields.io/badge/GitHub-Repo-lightgrey?style=for-the-badge&logo=github)](https://github.com/thomst08/requestrr/)
+[![DockerHub](https://img.shields.io/badge/GitHub-Upstream-lightgrey?style=for-the-badge&logo=github)](https://github.com/thomst08/requestrr/)
 
 
 Requestrr 
@@ -18,7 +17,7 @@ Requestrr
 > - **Bug fix**: fresh artist requests were never actually being set to `monitored: true` in Lidarr regardless of the `MonitorNewRequests` setting, because `addOptions.monitor` was never sent on artist creation
 > - **Bug fix**: Lidarr's own "NOT NULL constraint failed: Albums.Images" error (triggered when adding an album with no cover art — a genuine Lidarr-side bug, reproduced directly against its API) now shows a clear explanation instead of a generic error
 >
-> Not published to Docker Hub — see [Deploying this fork](#deploying-this-fork) below for how to build and run it.
+> **Not published to Docker Hub** — this fork is built locally, not pulled as an image. See [Docker Set-up & Start](#docker-set-up--start) below.
 
 Requestrr is a chatbot used to simplify using services like Sonarr/Radarr/Lidarr/Overseerr/Ombi via the use of chat!  
 
@@ -37,7 +36,7 @@ Requestrr is a chatbot used to simplify using services like Sonarr/Radarr/Lidarr
 Installation & Configuration
 ==================
 
-Refer to the Wiki for detailed steps:
+The web-portal configuration flow (Discord bot token, Sonarr/Radarr/Lidarr connections, categories) is unchanged from upstream — refer to their Wiki for that part:
 https://github.com/thomst08/requestrr/wiki
 
 <br />
@@ -45,33 +44,31 @@ https://github.com/thomst08/requestrr/wiki
 Docker Set-up & Start
 ==================
 
-Open a command prompt/terminal and then use the following command create and start the container:
+This fork isn't on Docker Hub, so build it from source rather than pulling `thomst08/requestrr`:
 
-```
-    docker run -d \
-      --name requestrr \
-      -p 4545:4545 \
-      -v path to config:/root/config \
-      --restart=unless-stopped \
-      thomst08/requestrr
-```
+```bash
+git clone https://github.com/Optimus-Perky/requestrr.git
+cd requestrr/Requestrr.WebApi
+docker build -f dockerfile -t requestrr-fork:live .
 
-You can also choose to run the container as a different user. See [docker run](https://docs.docker.com/engine/reference/run/#user) reference for how to set the user for your container.
-
-Then simply access the web portal at http://youraddress:4545/ to create your admin account, then you can configure everything through the web portal. <br />
-Once you have configured the bot and invited it to your Discord server, simply type **/help** to see all available commands.
-
-If you just need commands to quickly setup Requestrr with no issues, use the following commands:
-
-```
-mkdir /opt/Requestrr
-mkdir /opt/Requestrr/config
 docker run -d \
   --name requestrr \
   -p 4545:4545 \
-  -v /opt/Requestrr/config:/root/config \
+  -v /path/to/config:/root/config \
+  -e TZ=Europe/London \
   --restart=unless-stopped \
-  thomst08/requestrr
+  requestrr-fork:live
+```
+
+Then access the web portal at `http://youraddress:4545/` to create your admin account and configure everything. Once the bot is configured and invited to your Discord server, type **/help** to see all available commands.
+
+To pick up changes after pulling new commits, rebuild the image and recreate the container — your existing config volume (bot token, Sonarr/Radarr/Lidarr connections, everything) carries over untouched, since only the application code inside the container changes:
+
+```bash
+docker build -f dockerfile -t requestrr-fork:live .
+docker stop requestrr && docker rm requestrr
+docker run -d --name requestrr --restart=unless-stopped -p 4545:4545 \
+  -v /path/to/config:/root/config -e TZ=Europe/London requestrr-fork:live
 ```
 
 <br />
@@ -99,59 +96,21 @@ Requestrr supports the following environment variables to help you customize you
 docker run -d \
   --name requestrr \
   -p 5000:5000 \
-  -v /opt/Requestrr/config:/root/config \
+  -v /path/to/config:/root/config \
   -e REQUESTRR_PORT=5000 \
   -e REQUESTRR_BASEURL=/requestrr \
+  -e TZ=Europe/London \
   --restart=unless-stopped \
-  thomst08/requestrr
+  requestrr-fork:live
 ```
 
 > ⚠️ **Note**: When setting `REQUESTRR_BASEURL`, make sure it matches your reverse proxy config if you're serving Requestrr under a subpath.
 
 <br />
 
-Build Instructions
-==================
-
-Refer to the Wiki for detailed steps on how to build:
-https://github.com/thomst08/requestrr/wiki/Build-Instructions
-
-<br>
-
-Deploying this fork
-==================
-
-This fork isn't published to Docker Hub, so build it locally instead of pulling `thomst08/requestrr`:
-
-```bash
-git clone https://github.com/Optimus-Perky/requestrr.git
-cd requestrr/Requestrr.WebApi
-docker build -f dockerfile -t requestrr-fork:live .
-
-docker run -d \
-  --name requestrr \
-  -p 4545:4545 \
-  -v /path/to/config:/root/config \
-  -e TZ=Europe/London \
-  --restart=unless-stopped \
-  requestrr-fork:live
-```
-
-To pick up changes after pulling new commits, rebuild the image and recreate the container:
-
-```bash
-docker build -f dockerfile -t requestrr-fork:live .
-docker stop requestrr && docker rm requestrr
-docker run -d --name requestrr --restart=unless-stopped -p 4545:4545 \
-  -v /path/to/config:/root/config -e TZ=Europe/London requestrr-fork:live
-```
-
-Your existing config volume (Discord bot token, Sonarr/Radarr/Lidarr connections, everything) carries over untouched — only the application code inside the container changes.
-
-<br>
-
 Thank you list
 ==============
 
 Thank you goes out to the following people:
 - [@darkalfx]( https://github.com/darkalfx ) - Creator of Requestrr, without this person, Requestrr would not exist.
+- [@thomst08]( https://github.com/thomst08 ) - Maintainer of the fork this repo builds on.
