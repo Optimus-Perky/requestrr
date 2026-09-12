@@ -9,6 +9,17 @@ Requestrr
 
 ![logo](https://i.imgur.com/0UzLYvw.png)
 
+> ### This fork
+> Forked from [thomst08/requestrr](https://github.com/thomst08/requestrr) with the following added:
+>
+> - **.NET 6 → .NET 10 upgrade** (DSharpPlus 4.5.3 runs unchanged, no library migration needed)
+> - **Album-level requesting for the Lidarr/music module** — previously only whole-artist requests were possible. Now you can browse or search an artist's albums and request a specific one, or paste a MusicBrainz release-group link directly when Lidarr's own search can't find something (a real, confirmed gap in Lidarr's search coverage for some compilation series)
+> - **Explicit "Various Artists" handling** — typing "Various Artists" or "VA" as the artist name skips search entirely and prompts for an album name, since requesting the whole VA catalog as one artist is nonsensical
+> - **Bug fix**: fresh artist requests were never actually being set to `monitored: true` in Lidarr regardless of the `MonitorNewRequests` setting, because `addOptions.monitor` was never sent on artist creation
+> - **Bug fix**: Lidarr's own "NOT NULL constraint failed: Albums.Images" error (triggered when adding an album with no cover art — a genuine Lidarr-side bug, reproduced directly against its API) now shows a clear explanation instead of a generic error
+>
+> Not published to Docker Hub — see [Deploying this fork](#deploying-this-fork) below for how to build and run it.
+
 Requestrr is a chatbot used to simplify using services like Sonarr/Radarr/Lidarr/Overseerr/Ombi via the use of chat!  
 
 ### Features
@@ -104,6 +115,38 @@ Build Instructions
 
 Refer to the Wiki for detailed steps on how to build:
 https://github.com/thomst08/requestrr/wiki/Build-Instructions
+
+<br>
+
+Deploying this fork
+==================
+
+This fork isn't published to Docker Hub, so build it locally instead of pulling `thomst08/requestrr`:
+
+```bash
+git clone https://github.com/Optimus-Perky/requestrr.git
+cd requestrr/Requestrr.WebApi
+docker build -f dockerfile -t requestrr-fork:live .
+
+docker run -d \
+  --name requestrr \
+  -p 4545:4545 \
+  -v /path/to/config:/root/config \
+  -e TZ=Europe/London \
+  --restart=unless-stopped \
+  requestrr-fork:live
+```
+
+To pick up changes after pulling new commits, rebuild the image and recreate the container:
+
+```bash
+docker build -f dockerfile -t requestrr-fork:live .
+docker stop requestrr && docker rm requestrr
+docker run -d --name requestrr --restart=unless-stopped -p 4545:4545 \
+  -v /path/to/config:/root/config -e TZ=Europe/London requestrr-fork:live
+```
+
+Your existing config volume (Discord bot token, Sonarr/Radarr/Lidarr connections, everything) carries over untouched — only the application code inside the container changes.
 
 <br>
 
